@@ -22,8 +22,11 @@ jobs:
                 cd trunk
                 sudo ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib
                 sudo make
+                ls
 
-            - name: Upload build artifacts
-              uses: actions/upload-artifact@v3
-              with: 
-                path: trunk/objs
+            #- name: Upload build artifacts
+              #uses: actions/upload-artifact@v3
+              #with: 
+                #path: |
+                  #trunk/objs
+                  #trunk/conf
