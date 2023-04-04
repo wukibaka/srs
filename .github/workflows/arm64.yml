@@ -20,4 +20,4 @@ jobs:
             - name: Build
               run: |
                 cd trunk
-                sudo ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib && make
+                sudo ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib && sudo make
