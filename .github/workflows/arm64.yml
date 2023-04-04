@@ -20,14 +20,31 @@ jobs:
             - name: Build
               run: |
                 cd trunk
-                sudo ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib && sudo make
-                cd objs && ls
+                sudo ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib
+                sudo make
 
-            #- name: Upload build artifacts
-              #uses: actions/upload-artifact@v3
-              #with: 
-                #path: |
-                  #trunk/conf
-                  #trunk/etc
-                  #trunk/objs
-                  #trunk/usr
+            - name: Remove junk files
+              run: |
+                cd trunk/objs
+                rm -rf Makefile
+                rm -rf Platform-*-Linux-*-*-x86_64-crossbuild-aarch64-linux
+                rm -rf _srs_build_summary.sh
+                rm -rf logs
+                rm -rf openssl
+                rm -rf opus
+                rm -rf research
+                rm -rf src
+                rm -rf srs_auto_headers.hpp
+                rm -rf srt
+                rm -rf srtp2
+                rm -rf st
+                rm -rf utest
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v3
+              with: 
+                path: |
+                  trunk/conf
+                  trunk/etc
+                  trunk/objs
+                  trunk/usr
