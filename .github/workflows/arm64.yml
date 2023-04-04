@@ -26,19 +26,19 @@ jobs:
             - name: Remove junk files
               run: |
                 cd trunk/objs
-                rm -rf Makefile
-                rm -rf Platform-*-Linux-*-*-x86_64-crossbuild-aarch64-linux
-                rm -rf _srs_build_summary.sh
-                rm -rf logs
-                rm -rf openssl
-                rm -rf opus
-                rm -rf research
-                rm -rf src
-                rm -rf srs_auto_headers.hpp
-                rm -rf srt
-                rm -rf srtp2
-                rm -rf st
-                rm -rf utest
+                sudo rm -rf Makefile
+                sudo rm -rf Platform-*-Linux-*-*-x86_64-crossbuild-aarch64-linux
+                sudo rm -rf _srs_build_summary.sh
+                sudo rm -rf logs
+                sudo rm -rf openssl
+                sudo rm -rf opus
+                sudo rm -rf research
+                sudo rm -rf src
+                sudo rm -rf srs_auto_headers.hpp
+                sudo rm -rf srt
+                sudo rm -rf srtp2
+                sudo rm -rf st
+                sudo rm -rf utest
 
             - name: Upload build artifacts
               uses: actions/upload-artifact@v3
