@@ -11,13 +11,13 @@ jobs:
 
         steps: 
             - name: Check out
-                uses: actions/checkout@v3
+              uses: actions/checkout@v3
 
             - name: apt get
-                run: |
-                    apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+              run: |
+                apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
             - name: Build
-                run: |
-                    cd trunk
-                    ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib && make
+              run: |
+                cd trunk
+                ./configure --cross-build --cc=aarch64-linux-gnu-gcc --cxx=aarch64-linux-gnu-g++ --ar=aarch64-linux-gnu-ar --ld=aarch64-linux-gnu-ld --randlib=aarch64-linux-gnu-randlib && make
