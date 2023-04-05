@@ -7,15 +7,15 @@ on:
 jobs: 
     Build: 
         name: Cross Build
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-20.04
 
         steps: 
             - name: Check out
               uses: actions/checkout@v3
 
-            #- name: apt get
-              #run: |
-                #sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            - name: apt get
+              run: |
+                sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
             - name: Build
               run: |
