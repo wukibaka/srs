@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #ifndef SRS_KERNEL_CODEC_HPP
@@ -64,12 +64,32 @@ std::string srs_video_codec_id2str(SrsVideoCodecId codec);
 enum SrsVideoAvcFrameTrait
 {
     // set to the max value to reserved, for array map.
-    SrsVideoAvcFrameTraitReserved = 3,
-    SrsVideoAvcFrameTraitForbidden = 3,
+    SrsVideoAvcFrameTraitReserved = 6,
+    SrsVideoAvcFrameTraitForbidden = 6,
     
     SrsVideoAvcFrameTraitSequenceHeader = 0,
     SrsVideoAvcFrameTraitNALU = 1,
     SrsVideoAvcFrameTraitSequenceHeaderEOF = 2,
+
+    SrsVideoHEVCFrameTraitPacketTypeSequenceStart = 0,
+    SrsVideoHEVCFrameTraitPacketTypeCodedFrames = 1,
+    SrsVideoHEVCFrameTraitPacketTypeSequenceEnd = 2,
+    // CompositionTime Offset is implied to equal zero. This is
+    // an optimization to save putting SI24 composition time value of zero on
+    // the wire. See pseudo code below in the VideoTagBody section
+    SrsVideoHEVCFrameTraitPacketTypeCodedFramesX = 3,
+    // VideoTagBody does not contain video data. VideoTagBody
+    // instead contains an AMF encoded metadata. See Metadata Frame
+    // section for an illustration of its usage. As an example, the metadata
+    // can be HDR information. This is a good way to signal HDR
+    // information. This also opens up future ways to express additional
+    // metadata that is meant for the next video sequence.
+    //
+    // note: presence of PacketTypeMetadata means that FrameType
+    // flags at the top of this table should be ignored
+    SrsVideoHEVCFrameTraitPacketTypeMetadata = 4,
+    // Carriage of bitstream in MPEG-2 TS format
+    SrsVideoHEVCFrameTraitPacketTypeMPEG2TSSequenceStart = 5,
 };
 
 /**
@@ -758,7 +778,7 @@ struct SrsHevcRbspVps
     uint32_t vps_max_latency_increase_plus1[8];
     uint8_t vps_max_layer_id;
     uint32_t vps_num_layer_sets_minus1;
-    std::vector<std::vector<uint8_t>> layer_id_included_flag;
+    std::vector< std::vector<uint8_t> > layer_id_included_flag;
     uint8_t vps_timing_info_present_flag;
     uint32_t vps_num_units_in_tick;
     uint32_t vps_time_scale;
@@ -1100,7 +1120,7 @@ std::string srs_hevc_level2str(SrsHevcLevel level);
 
 /**
  * A sample is the unit of frame.
- * It's a NALU for H.264.
+ * It's a NALU for H.264, H.265.
  * It's the whole AAC raw data for AAC.
  * @remark Neither SPS/PPS or ASC is sample unit, it's codec sequence header.
  */
@@ -1111,15 +1131,11 @@ public:
     int size;
     // The ptr of unit, user must free it.
     char* bytes;
-    // Whether is B frame.
-    bool bframe;
 public:
     SrsSample();
     SrsSample(char* b, int s);
     ~SrsSample();
 public:
-    // If we need to know whether sample is bframe, we have to parse the NALU payload.
-    srs_error_t parse_bframe();
     // Copy sample, share the bytes pointer.
     SrsSample* copy();
 };
@@ -1302,6 +1318,9 @@ public:
     virtual srs_error_t add_sample(char* bytes, int size);
 public:
     virtual SrsVideoCodecConfig* vcodec();
+public:
+    static srs_error_t parse_avc_nalu_type(const SrsSample* sample, SrsAvcNaluType& avc_nalu_type);
+    static srs_error_t parse_avc_b_frame(const SrsSample* sample, bool& is_b_frame);
 };
 
 /**

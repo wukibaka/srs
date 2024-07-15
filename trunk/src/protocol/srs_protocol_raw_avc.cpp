@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #include <srs_protocol_raw_avc.hpp>
@@ -125,11 +125,10 @@ srs_error_t SrsRawH264Stream::mux_sequence_header(string sps, string pps, string
     // Nbytes of pps:
     //      pictureParameterSetNALUnit
     int nb_packet = 5 + (3 + (int)sps.length()) + (3 + (int)pps.length());
-    char* packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
-    
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
+
     // use stream to generate the h264 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
     
     // decode the SPS:
     // @see: 7.3.2.1.1, ISO_IEC_14496-10-AVC-2012.pdf, page 62
@@ -157,14 +156,14 @@ srs_error_t SrsRawH264Stream::mux_sequence_header(string sps, string pps, string
         stream.write_1bytes(level_idc);
         // lengthSizeMinusOne, or NAL_unit_length, always use 4bytes size,
         // so we always set it to 0x03.
-        stream.write_1bytes(0x03);
+        stream.write_1bytes(uint8_t(0xfc | 0x03));
     }
     
     // sps
     if (true) {
         // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
         // numOfSequenceParameterSets, always 1
-        stream.write_1bytes(0x01);
+        stream.write_1bytes(uint8_t(0xe0 | 0x01));
         // sequenceParameterSetLength
         stream.write_2bytes((int16_t)sps.length());
         // sequenceParameterSetNALUnit
@@ -186,7 +185,7 @@ srs_error_t SrsRawH264Stream::mux_sequence_header(string sps, string pps, string
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // profile_idc == 100 || profile_idc == 110 || profile_idc == 122 || profile_idc == 144
 
-    sh = string(packet, nb_packet);
+    sh = string(packet.get(), nb_packet);
     
     return err;
 }
@@ -200,11 +199,10 @@ srs_error_t SrsRawH264Stream::mux_ipb_frame(char* frame, int nb_frame, string& i
     // Nbytes of nalu.
     //      NALUnit
     int nb_packet = 4 + nb_frame;
-    char* packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
-    
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
+
     // use stream to generate the h264 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
     
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // lengthSizeMinusOne, or NAL_unit_length, always use 4bytes size
@@ -217,7 +215,7 @@ srs_error_t SrsRawH264Stream::mux_ipb_frame(char* frame, int nb_frame, string& i
     // NALUnit
     stream.write_bytes(frame, nb_frame);
 
-    ibp = string(packet, nb_packet);
+    ibp = string(packet.get(), nb_packet);
     
     return err;
 }
@@ -382,7 +380,7 @@ srs_error_t SrsRawHEVCStream::pps_demux(char *frame, int nb_frame, std::string &
     return err;
 }
 
-srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string sps, std::string pps, std::string &hvcC)
+srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string sps, std::vector<std::string>& pps, std::string &hvcC)
 {
     srs_error_t err = srs_success;
 
@@ -400,16 +398,20 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
     //      sequenceParameterSetNALUnit
 
     // use simple mode: nalu size + nalu data
-    int nb_packet = 23 + 5 + (int)vps.length() + 5 + (int)sps.length() + 5 + (int)pps.length();
-    char *packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
+    int pps_size = 0;
+    for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++) {
+        pps_size += 2 + it->length();
+    }
+
+    int nb_packet = 23 + 5 + (int)vps.length() + 5 + (int)sps.length() + 5 + pps_size - 2;
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
 
     // use stream to generate the hevc packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
 
     SrsFormat format;
     if ((err = format.initialize()) != srs_success) {
-        return srs_error_new(ERROR_STREAM_CASTER_HEVC_FORMAT, "format failed");
+        return srs_error_wrap(err, "format failed");
     }
     // hevc_dec_conf_record
     SrsHevcDecoderConfigurationRecord *hevc_info = &format.vcodec->hevc_dec_conf_record_;
@@ -420,7 +422,7 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
         // @doc ITU-T-H.265-2021.pdf, page 54.
         SrsBuffer vps_stream((char*)vps.data(), vps.length());
         if ((err = format.hevc_demux_vps(&vps_stream)) != srs_success) {
-            return srs_error_new(ERROR_STREAM_CASTER_HEVC_VPS, "vps demux failed, len=%d", vps.length());
+            return srs_error_wrap(err, "vps demux failed, len=%d", vps.length());
         }
 
         // H265 SPS Nal Unit (seq_parameter_set_rbsp()) parser.
@@ -428,7 +430,7 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
         // @doc ITU-T-H.265-2021.pdf, page 55.
         SrsBuffer sps_stream((char*)sps.data(), sps.length());
         if ((err = format.hevc_demux_sps(&sps_stream)) != srs_success) {
-            return srs_error_new(ERROR_STREAM_CASTER_HEVC_SPS, "sps demux failed, len=%d",sps.length());
+            return srs_error_wrap(err, "sps demux failed, len=%d",sps.length());
         }
     }
 
@@ -495,15 +497,18 @@ srs_error_t SrsRawHEVCStream::mux_sequence_header(std::string vps, std::string s
     if (true) {
         // nal_type
         stream.write_1bytes(SrsHevcNaluType_PPS & 0x3f);
-        // numOfPictureParameterSets, always 1
-        stream.write_2bytes(0x01);
-        // pictureParameterSetLength
-        stream.write_2bytes((int16_t)pps.length());
-        // pictureParameterSetNALUnit
-        stream.write_string(pps);
+        // numOfPictureParameterSets
+        stream.write_2bytes(pps.size());
+
+        for (std::vector<std::string>::iterator it = pps.begin(); it != pps.end(); it++) {
+            //pictureParameterSetLength
+            stream.write_2bytes((int16_t)it->length());
+            //pictureParameterSetNALUnit
+            stream.write_string(*it);
+        }
     }
 
-    hvcC = string(packet, nb_packet);
+    hvcC = string(packet.get(), nb_packet);
 
     return err;
 }
@@ -517,11 +522,10 @@ srs_error_t SrsRawHEVCStream::mux_ipb_frame(char *frame, int nb_frame, std::stri
     // Nbytes of nalu.
     //      NALUnit
     int nb_packet = 4 + nb_frame;
-    char *packet = new char[nb_packet];
-    SrsAutoFreeA(char, packet);
+    SrsUniquePtr<char[]> packet(new char[nb_packet]);
 
     // use stream to generate the h265 packet.
-    SrsBuffer stream(packet, nb_packet);
+    SrsBuffer stream(packet.get(), nb_packet);
 
     // 5.3.4.2.1 Syntax, ISO_IEC_14496-15-AVC-format-2012.pdf, page 16
     // lengthSizeMinusOne, or NAL_unit_length, always use 4bytes size
@@ -534,7 +538,7 @@ srs_error_t SrsRawHEVCStream::mux_ipb_frame(char *frame, int nb_frame, std::stri
     // NALUnit
     stream.write_bytes(frame, nb_frame);
 
-    ibp = string(packet, nb_packet);
+    ibp = string(packet.get(), nb_packet);
 
     return err;
 }

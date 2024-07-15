@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2013-2023 The SRS Authors
+// Copyright (c) 2013-2024 The SRS Authors
 //
-// SPDX-License-Identifier: MIT or MulanPSL-2.0
+// SPDX-License-Identifier: MIT
 //
 
 #ifndef SRS_APP_THREADS_HPP
@@ -53,6 +53,7 @@ extern SrsCircuitBreaker* _srs_circuit_breaker;
 
 // Initialize global shared variables cross all threads.
 extern srs_error_t srs_global_initialize();
+extern void srs_global_dispose();
 
 // The thread mutex wrapper, without error.
 class SrsThreadMutex
